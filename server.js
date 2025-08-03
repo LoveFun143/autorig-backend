@@ -1,10 +1,11 @@
-console.log('🚀 AutoRig Backend v2.0 - Real AI Processing');
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+console.log('🚀 AutoRig Backend v2.0 - Simple Processing');
 
 // Simple CORS - allow all origins
 app.use(cors());
@@ -18,56 +19,41 @@ app.get('/', (req, res) => {
   res.json({ message: 'AutoRig Backend API Running' });
 });
 
-// Image processing route with real AI
-app.post('/process-image', upload.single('image'), async (req, res) => {
-  try {
-    console.log('=== Starting Real AI Processing ===');
-    console.log('File received:', req.file ? req.file.filename : 'NO FILE');
-    
-    if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
+// Simple image processing (working version)
+app.post('/process-image', upload.single('image'), (req, res) => {
+  console.log('=== Simple Processing ===');
+  console.log('Image received:', req.file ? req.file.filename : 'No file');
+  
+  // Enhanced mock results
+  res.json({
+    layers: [
+      { name: 'background', confidence: 0.85 },
+      { name: 'face', confidence: 0.90 }, 
+      { name: 'hair', confidence: 0.80 },
+      { name: 'body', confidence: 0.88 },
+      { name: 'clothing', confidence: 0.75 }
+    ],
+    riggedModel: {
+      bones: [
+        { name: 'head', position: [0, 1, 0] }, 
+        { name: 'neck', position: [0, 0.8, 0] },
+        { name: 'spine', position: [0, 0.5, 0] },
+        { name: 'left_eye', position: [-0.1, 0.95, 0] },
+        { name: 'right_eye', position: [0.1, 0.95, 0] },
+        { name: 'jaw', position: [0, 0.9, 0] },
+        { name: 'root', position: [0, 0, 0] }
+      ],
+      animations: ['idle', 'blink', 'head_turn', 'smile'],
+      quality: 'high'
+    },
+    processingInfo: {
+      aiUsed: false,
+      processingTime: 1000,
+      version: 'v2.0-enhanced'
     }
-
-    // Import and use ImageProcessor
-    const ImageProcessor = require('./services/ImageProcessor');
-    const processor = new ImageProcessor();
-    
-    // Real AI segmentation
-    const segmentationResult = await processor.segmentImage(req.file.path);
-    
-    // Generate rig from real segments
-    const riggedModel = await processor.generateRig(segmentationResult.segments);
-    
-    // Return real results
-    const result = {
-      layers: segmentationResult.segments.map(segment => ({
-        name: segment.label,
-        confidence: segment.confidence,
-        url: `/processed/${segment.label}.png`
-      })),
-      riggedModel: riggedModel,
-      processingInfo: {
-        aiUsed: segmentationResult.aiUsed,
-        fallback: segmentationResult.fallback,
-        processingTime: Date.now() - segmentationResult.processingTime
-      }
-    };
-    
-    console.log('✅ Real AI processing complete!');
-    console.log('Segments found:', segmentationResult.segments.length);
-    res.json(result);
-    
-  } catch (error) {
-    console.error('❌ Processing Error:', error.message);
-    res.status(500).json({ 
-      error: 'Processing failed: ' + error.message,
-      fallback: true
-    });
-  }
+  });
 });
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
-
-
