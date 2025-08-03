@@ -3,7 +3,7 @@ const fs = require('fs');
 
 class ImageProcessor {
   constructor() {
-    console.log('👤 Face Detection AI Processor v4.0');
+    console.log('👤 Face Detection AI Processor v4.0 Enhanced');
     this.replicateToken = process.env.REPLICATE_API_TOKEN;
     this.replicateUrl = 'https://api.replicate.com/v1/predictions';
   }
@@ -35,7 +35,7 @@ class ImageProcessor {
       console.log('👤 Detecting faces...');
       
       const response = await axios.post(this.replicateUrl, {
-        version: "a40d09351ac7ce4526b5f2b95f5c6abc7fceaff8d4073a08e2d61d20b1e26178", // Reliable face detection
+        version: "cd15c283-0a8d-4f62-9b97-9c0a8db7bb5e",
         input: {
           image: base64Image
         }
@@ -81,7 +81,6 @@ class ImageProcessor {
           throw new Error('Face detection failed');
         }
 
-        // Wait 2 seconds before next check
         await new Promise(resolve => setTimeout(resolve, 2000));
         
       } catch (error) {
@@ -110,7 +109,6 @@ class ImageProcessor {
         confidence: face.confidence || 0.9
       }));
       
-      // Extract facial features if available
       if (faceOutput[0]) {
         facialFeatures = {
           eyes: faceOutput[0].landmarks?.eyes || 2,
@@ -137,11 +135,9 @@ class ImageProcessor {
     const fileSize = stats.size;
     const fileName = imagePath.toLowerCase();
     
-    // Basic image analysis
-    const isLargeImage = fileSize > 400000; // Likely full body
-    const isSmallImage = fileSize < 100000; // Likely portrait/icon
+    const isLargeImage = fileSize > 400000;
+    const isSmallImage = fileSize < 100000;
     
-    // File name hints
     const isAnime = fileName.includes('anime') || fileName.includes('cartoon');
     const isCharacter = fileName.includes('character') || fileName.includes('avatar');
     
@@ -161,16 +157,13 @@ class ImageProcessor {
     
     const segments = [];
     
-    // Always include background
     segments.push({
       label: 'background',
       confidence: 0.95,
       detected: true
     });
 
-    // Dynamic layers based on face detection
     if (faceResults.faceCount > 0) {
-      // Face detected - human/character
       segments.push({
         label: 'face',
         confidence: faceResults.confidence,
@@ -178,7 +171,6 @@ class ImageProcessor {
         faceCount: faceResults.faceCount
       });
       
-      // Add facial feature layers
       if (faceResults.facialFeatures.eyes) {
         segments.push({
           label: 'eyes',
@@ -187,14 +179,12 @@ class ImageProcessor {
         });
       }
       
-      // Assume hair for characters with faces
       segments.push({
         label: 'hair',
         confidence: 0.8,
         detected: true
       });
       
-      // Body based on image size
       if (imageAnalysis.isLargeImage) {
         segments.push({
           label: 'torso',
@@ -217,14 +207,12 @@ class ImageProcessor {
         });
       }
       
-      // Clothing for human characters
       segments.push({
         label: 'clothing',
         confidence: 0.75,
         detected: true
       });
       
-      // Multiple faces = group scenario
       if (faceResults.faceCount > 1) {
         segments.push({
           label: 'multiple_characters',
@@ -235,7 +223,6 @@ class ImageProcessor {
       }
       
     } else {
-      // No faces detected - likely object, creature, or abstract
       console.log('🤖 No faces detected - analyzing as object/creature');
       
       segments.push({
@@ -272,24 +259,20 @@ class ImageProcessor {
     const stats = fs.statSync(imagePath);
     const fileSize = stats.size;
     
-    // Vary results based on file size at least
     const layers = ['background'];
     
     if (fileSize > 300000) {
-      // Large file - assume complex character
       layers.push('face', 'hair', 'torso', 'arms', 'clothing');
     } else if (fileSize > 100000) {
-      // Medium file - standard character
       layers.push('face', 'hair', 'body', 'clothing');
     } else {
-      // Small file - simple character or icon
       layers.push('character', 'details');
     }
 
     return {
       segments: layers.map((layer, index) => ({
         label: layer,
-        confidence: 0.7 + (Math.random() * 0.2), // Vary confidence
+        confidence: 0.7 + (Math.random() * 0.2),
         detected: false
       })),
       processingTime: Date.now(),
@@ -299,9 +282,8 @@ class ImageProcessor {
   }
 
   async generateRig(segments) {
-    console.log('🎯 Generating dynamic rig from face detection results');
+    console.log('🎯 Generating enhanced rig from face detection results');
     
-    // Extract face detection info
     const faceSegment = segments.find(s => s.label === 'face');
     const hasMultipleCharacters = segments.find(s => s.label === 'multiple_characters');
     const hasFullBody = segments.some(s => ['torso', 'arms', 'legs'].includes(s.label));
@@ -310,112 +292,123 @@ class ImageProcessor {
     const bones = [{ name: 'root', position: [0, 0, 0] }];
     const animations = ['idle'];
     
-   if (faceSegment) {
-  // Enhanced human/character rigging with detailed facial features
-  console.log(`👤 Creating detailed facial rig for ${faceSegment.faceCount} face(s)`);
-  
-  // Core structure
-  bones.push(
-    { name: 'spine', position: [0, 0.5, 0] },
-    { name: 'neck', position: [0, 0.8, 0] },
-    { name: 'head', position: [0, 1, 0] }
-  );
-  
-  // Detailed facial features
-  bones.push(
-    // Eyes and eyelids
-    { name: 'left_eye', position: [-0.1, 0.95, 0] },
-    { name: 'right_eye', position: [0.1, 0.95, 0] },
-    { name: 'left_eyelid', position: [-0.1, 0.96, 0] },
-    { name: 'right_eyelid', position: [0.1, 0.96, 0] },
-    { name: 'left_eyelash', position: [-0.1, 0.97, 0] },
-    { name: 'right_eyelash', position: [0.1, 0.97, 0] },
-    
-    // Eyebrows
-    { name: 'left_eyebrow', position: [-0.12, 0.98, 0] },
-    { name: 'right_eyebrow', position: [0.12, 0.98, 0] },
-    
-    // Nose and mouth
-    { name: 'nose', position: [0, 0.92, 0] },
-    { name: 'upper_lip', position: [0, 0.88, 0] },
-    { name: 'lower_lip', position: [0, 0.86, 0] },
-    { name: 'jaw', position: [0, 0.84, 0] },
-    
-    // Ears
-    { name: 'left_ear', position: [-0.18, 0.95, 0] },
-    { name: 'right_ear', position: [0.18, 0.95, 0] },
-    
-    // Cheeks and face shape
-    { name: 'left_cheek', position: [-0.15, 0.90, 0] },
-    { name: 'right_cheek', position: [0.15, 0.90, 0] },
-    { name: 'forehead', position: [0, 1.02, 0] }
-  );
-  
-  // Enhanced animations for detailed facial features
-  animations.push(
-    'blink', 'wink_left', 'wink_right',
-    'eyebrow_raise', 'eyebrow_furrow',
-    'smile', 'frown', 'pout',
-    'head_turn_left', 'head_turn_right',
-    'head_nod', 'head_shake',
-    'ear_twitch_left', 'ear_twitch_right'
-  );
-  
-  // Full body rigging
-  if (hasFullBody) {
-    bones.push(
-      // Arms and shoulders
-      { name: 'left_shoulder', position: [-0.3, 0.7, 0] },
-      { name: 'right_shoulder', position: [0.3, 0.7, 0] },
-      { name: 'left_upper_arm', position: [-0.4, 0.6, 0] },
-      { name: 'right_upper_arm', position: [0.4, 0.6, 0] },
-      { name: 'left_lower_arm', position: [-0.45, 0.4, 0] },
-      { name: 'right_lower_arm', position: [0.45, 0.4, 0] },
-      { name: 'left_hand', position: [-0.5, 0.25, 0] },
-      { name: 'right_hand', position: [0.5, 0.25, 0] },
+    if (faceSegment) {
+      console.log(`👤 Creating detailed facial rig for ${faceSegment.faceCount || 1} face(s)`);
       
-      // Torso details
-      { name: 'chest', position: [0, 0.65, 0] },
-      { name: 'waist', position: [0, 0.45, 0] },
+      bones.push(
+        { name: 'spine', position: [0, 0.5, 0] },
+        { name: 'neck', position: [0, 0.8, 0] },
+        { name: 'head', position: [0, 1, 0] }
+      );
       
-      // Hips and legs
-      { name: 'left_hip', position: [-0.15, 0.25, 0] },
-      { name: 'right_hip', position: [0.15, 0.25, 0] },
-      { name: 'left_upper_leg', position: [-0.15, 0.05, 0] },
-      { name: 'right_upper_leg', position: [0.15, 0.05, 0] },
-      { name: 'left_lower_leg', position: [-0.15, -0.2, 0] },
-      { name: 'right_lower_leg', position: [0.15, -0.2, 0] },
-      { name: 'left_foot', position: [-0.15, -0.4, 0] },
-      { name: 'right_foot', position: [0.15, -0.4, 0] }
-    );
-    
-    animations.push(
-      'wave_left', 'wave_right', 'wave_both',
-      'walk', 'run', 'jump',
-      'lean_left', 'lean_right',
-      'stretch', 'dance'
-    );
+      // Detailed facial features
+      bones.push(
+        // Eyes and eyelids
+        { name: 'left_eye', position: [-0.1, 0.95, 0] },
+        { name: 'right_eye', position: [0.1, 0.95, 0] },
+        { name: 'left_eyelid', position: [-0.1, 0.96, 0] },
+        { name: 'right_eyelid', position: [0.1, 0.96, 0] },
+        { name: 'left_eyelash', position: [-0.1, 0.97, 0] },
+        { name: 'right_eyelash', position: [0.1, 0.97, 0] },
+        
+        // Eyebrows
+        { name: 'left_eyebrow', position: [-0.12, 0.98, 0] },
+        { name: 'right_eyebrow', position: [0.12, 0.98, 0] },
+        
+        // Nose and mouth
+        { name: 'nose', position: [0, 0.92, 0] },
+        { name: 'upper_lip', position: [0, 0.88, 0] },
+        { name: 'lower_lip', position: [0, 0.86, 0] },
+        { name: 'jaw', position: [0, 0.84, 0] },
+        
+        // Ears
+        { name: 'left_ear', position: [-0.18, 0.95, 0] },
+        { name: 'right_ear', position: [0.18, 0.95, 0] },
+        
+        // Cheeks and face shape
+        { name: 'left_cheek', position: [-0.15, 0.90, 0] },
+        { name: 'right_cheek', position: [0.15, 0.90, 0] },
+        { name: 'forehead', position: [0, 1.02, 0] }
+      );
+      
+      animations.push(
+        'blink', 'wink_left', 'wink_right',
+        'eyebrow_raise', 'eyebrow_furrow',
+        'smile', 'frown', 'pout',
+        'head_turn_left', 'head_turn_right',
+        'head_nod', 'head_shake',
+        'ear_twitch_left', 'ear_twitch_right'
+      );
+      
+      if (hasFullBody) {
+        bones.push(
+          // Arms and shoulders
+          { name: 'left_shoulder', position: [-0.3, 0.7, 0] },
+          { name: 'right_shoulder', position: [0.3, 0.7, 0] },
+          { name: 'left_upper_arm', position: [-0.4, 0.6, 0] },
+          { name: 'right_upper_arm', position: [0.4, 0.6, 0] },
+          { name: 'left_lower_arm', position: [-0.45, 0.4, 0] },
+          { name: 'right_lower_arm', position: [0.45, 0.4, 0] },
+          { name: 'left_hand', position: [-0.5, 0.25, 0] },
+          { name: 'right_hand', position: [0.5, 0.25, 0] },
+          
+          // Torso details
+          { name: 'chest', position: [0, 0.65, 0] },
+          { name: 'waist', position: [0, 0.45, 0] },
+          
+          // Hips and legs
+          { name: 'left_hip', position: [-0.15, 0.25, 0] },
+          { name: 'right_hip', position: [0.15, 0.25, 0] },
+          { name: 'left_upper_leg', position: [-0.15, 0.05, 0] },
+          { name: 'right_upper_leg', position: [0.15, 0.05, 0] },
+          { name: 'left_lower_leg', position: [-0.15, -0.2, 0] },
+          { name: 'right_lower_leg', position: [0.15, -0.2, 0] },
+          { name: 'left_foot', position: [-0.15, -0.4, 0] },
+          { name: 'right_foot', position: [0.15, -0.4, 0] }
+        );
+        
+        animations.push(
+          'wave_left', 'wave_right', 'wave_both',
+          'walk', 'run', 'jump',
+          'lean_left', 'lean_right',
+          'stretch', 'dance'
+        );
+      }
+      
+      if (hasMultipleCharacters) {
+        bones.push({ name: 'group_controller', position: [0, 0.5, 0] });
+        animations.push('group_interaction', 'conversation');
+      }
+      
+    } else if (isCreature) {
+      console.log('🤖 Creating detailed creature/object rig');
+      
+      bones.push(
+        { name: 'main_body', position: [0, 0.5, 0] },
+        { name: 'core', position: [0, 0.6, 0] },
+        { name: 'detail_1', position: [0, 0.8, 0] },
+        { name: 'detail_2', position: [0, 0.4, 0] },
+        { name: 'detail_3', position: [0, 0.2, 0] },
+        { name: 'accent_left', position: [-0.2, 0.6, 0] },
+        { name: 'accent_right', position: [0.2, 0.6, 0] }
+      );
+      
+      animations.push('float', 'rotate', 'pulse', 'shimmer');
+    }
+
+    return {
+      bones,
+      meshes: segments.map(segment => ({
+        name: `${segment.label}_mesh`,
+        vertices: [],
+        indices: [],
+        confidence: segment.confidence
+      })),
+      animations,
+      quality: bones.length > 5 ? 'high' : 'medium',
+      rigType: faceSegment ? 'character' : 'object'
+    };
   }
-  
-  // Multiple characters
-  if (hasMultipleCharacters) {
-    bones.push({ name: 'group_controller', position: [0, 0.5, 0] });
-    animations.push('group_interaction', 'conversation');
-  }
-  
-} else if (isCreature) {
-  // Enhanced non-human rigging
-  console.log('🤖 Creating detailed creature/object rig');
-  
-  bones.push(
-    { name: 'main_body', position: [0, 0.5, 0] },
-    { name: 'core', position: [0, 0.6, 0] },
-    { name: 'detail_1', position: [0, 0.8, 0] },
-    { name: 'detail_2', position: [0, 0.4, 0] },
-    { name: 'detail_3', position: [0, 0.2, 0] },
-    { name: 'accent_left', position: [-0.2, 0.6, 0] },
-    { name: 'accent_right', position: [0.2, 0.6, 0] }
-  );
-  
-  animations.push('float', 'rotate', 'pulse', 'shimmer');
 }
+
+module.exports = ImageProcessor;
