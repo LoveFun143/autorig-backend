@@ -8,7 +8,14 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: [
+    'https://autorig-frontend-xyz.vercel.app', // Your actual Vercel URL
+    'http://localhost:3000',
+    /\.vercel\.app$/
+  ],
+  credentials: true
+}));
 app.use(express.json());
 
 // File upload configuration
@@ -51,4 +58,5 @@ app.post('/process-image', upload.single('image'), async (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`AutoRig Backend running on port ${PORT}`);
+
 });
