@@ -9,13 +9,7 @@ const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors({
-  origin: [
-    'https://autorig-frontend.vercel.app',
-    'http://localhost:3000'
-  ],
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type'],
-  credentials: true
+  origin: '*'
 }));
 
 // File upload configuration
@@ -65,4 +59,5 @@ app.post('/process-image', upload.single('image'), async (req, res) => {
     res.status(500).json({ error: 'Processing failed: ' + error.message });
   }
 });
+
 
