@@ -17,7 +17,6 @@ app.use(cors({
   allowedHeaders: ['Content-Type'],
   credentials: true
 }));
-app.use(express.json());
 
 // File upload configuration
 const upload = multer({
@@ -66,3 +65,4 @@ app.post('/process-image', upload.single('image'), async (req, res) => {
     res.status(500).json({ error: 'Processing failed: ' + error.message });
   }
 });
+
