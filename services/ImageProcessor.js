@@ -3,30 +3,29 @@ const fs = require('fs');
 
 class ImageProcessor {
   constructor() {
-    console.log('🔑 Multi-AI Image Processor v3.0');
+    console.log('👤 Face Detection AI Processor v4.0');
     this.replicateToken = process.env.REPLICATE_API_TOKEN;
     this.replicateUrl = 'https://api.replicate.com/v1/predictions';
   }
 
   async segmentImage(imagePath) {
     try {
-      console.log('🔄 Starting multi-AI analysis for:', imagePath);
+      console.log('👤 Starting face detection analysis...');
       
       const imageBuffer = fs.readFileSync(imagePath);
       const base64Image = `data:image/jpeg;base64,${imageBuffer.toString('base64')}`;
       
-      // Run multiple AI analyses in parallel
-      const [faceResults, objectResults, styleResults] = await Promise.all([
-        this.detectFaces(base64Image),
-        this.detectObjects(base64Image),
-        this.classifyStyle(base64Image)
-      ]);
-
-      // Combine results into character analysis
-      return this.combineAIResults(faceResults, objectResults, styleResults);
+      // Use reliable face detection model
+      const faceResults = await this.detectFaces(base64Image);
+      
+      // Analyze image properties
+      const imageAnalysis = this.analyzeImageProperties(imageBuffer, imagePath);
+      
+      // Combine face detection with image analysis
+      return this.createDynamicSegmentation(faceResults, imageAnalysis);
       
     } catch (error) {
-      console.error('❌ Multi-AI analysis failed:', error.message);
+      console.error('❌ Face detection failed:', error.message);
       return this.createSmartFallback(imagePath);
     }
   }
@@ -36,7 +35,7 @@ class ImageProcessor {
       console.log('👤 Detecting faces...');
       
       const response = await axios.post(this.replicateUrl, {
-        version: "a40d09351ac7ce4526b5f2b95f5c6abc7fceaff8d4073a08e2d61d20b1e26178", // Face detection
+        version: "a40d09351ac7ce4526b5f2b95f5c6abc7fceaff8d4073a08e2d61d20b1e26178", // Reliable face detection
         input: {
           image: base64Image
         }
@@ -47,60 +46,19 @@ class ImageProcessor {
         }
       });
 
-      return await this.pollForResults(response.data.id, 'face');
+      const predictionId = response.data.id;
+      console.log('👤 Face detection started, ID:', predictionId);
+      
+      return await this.pollForResults(predictionId);
       
     } catch (error) {
-      console.log('⚠️ Face detection fallback');
-      return { faces: 1, eyes: 2, mouth: 1, confidence: 0.7 };
+      console.error('❌ Face API error:', error.response?.data || error.message);
+      throw error;
     }
   }
 
-  async detectObjects(base64Image) {
-    try {
-      console.log('🎯 Detecting objects...');
-      
-      const response = await axios.post(this.replicateUrl, {
-        version: "82c3c8c2f3ecfda6f6e35090615c901cfbbfdf89a39beb8b0bbf7b6b1a2d6b60", // Object detection
-        input: {
-          image: base64Image
-        }
-      }, {
-        headers: {
-          'Authorization': `Token ${this.replicateToken}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      return await this.pollForResults(response.data.id, 'objects');
-      
-    } catch (error) {
-      console.log('⚠️ Object detection fallback');
-      return { objects: ['person', 'clothing'], confidence: 0.6 };
-    }
-  }
-
-  async classifyStyle(base64Image) {
-    try {
-      console.log('🎨 Classifying art style...');
-      
-      // Simple style classification based on image properties
-      const imageSize = Buffer.byteLength(base64Image, 'base64');
-      const isLargeImage = imageSize > 500000;
-      
-      return {
-        style: isLargeImage ? 'detailed' : 'simple',
-        isAnime: true, // Most uploaded images will be anime/cartoon
-        isFullBody: isLargeImage,
-        confidence: 0.8
-      };
-      
-    } catch (error) {
-      return { style: 'unknown', isAnime: false, isFullBody: false, confidence: 0.5 };
-    }
-  }
-
-  async pollForResults(predictionId, type) {
-    const maxAttempts = 15; // Shorter timeout for simpler models
+  async pollForResults(predictionId) {
+    const maxAttempts = 20;
     
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       try {
@@ -111,136 +69,227 @@ class ImageProcessor {
         });
 
         const prediction = response.data;
-        console.log(`🔄 ${type} AI Status (${attempt + 1}/15):`, prediction.status);
+        console.log(`👤 Face detection status (${attempt + 1}/20):`, prediction.status);
 
         if (prediction.status === 'succeeded') {
-          console.log(`✅ ${type} detection complete!`);
-          return this.processSpecificResults(prediction.output, type);
+          console.log('✅ Face detection complete!');
+          return this.processFaceResults(prediction.output);
         }
 
         if (prediction.status === 'failed') {
-          throw new Error(`${type} AI processing failed`);
+          console.error('❌ Face detection failed:', prediction.error);
+          throw new Error('Face detection failed');
         }
 
+        // Wait 2 seconds before next check
         await new Promise(resolve => setTimeout(resolve, 2000));
         
       } catch (error) {
-        console.error(`❌ ${type} polling error:`, error.message);
-        break;
+        console.error('❌ Polling error:', error.message);
+        throw error;
       }
     }
 
-    throw new Error(`${type} AI processing timeout`);
+    throw new Error('Face detection timeout');
   }
 
-  processSpecificResults(aiOutput, type) {
-    console.log(`🎯 Processing ${type} results...`);
+  processFaceResults(faceOutput) {
+    console.log('🎯 Processing face detection results...');
     
-    if (type === 'face') {
-      return {
-        faces: aiOutput?.length || 1,
-        eyes: 2,
-        mouth: 1,
-        eyebrows: 2,
-        confidence: 0.9
-      };
-    }
-    
-    if (type === 'objects') {
-      const detectedObjects = aiOutput || [];
-      return {
-        objects: detectedObjects.map(obj => obj.class || obj.label || 'unknown'),
-        clothing: detectedObjects.filter(obj => 
-          ['shirt', 'dress', 'jacket', 'hoodie', 'clothing'].includes(obj.class)
-        ).length > 0,
-        accessories: detectedObjects.filter(obj => 
-          ['hat', 'glasses', 'jewelry', 'ears', 'tail'].includes(obj.class)
-        ).length > 0,
-        confidence: 0.85
-      };
-    }
+    let faceCount = 0;
+    let facePositions = [];
+    let facialFeatures = {};
 
-    return aiOutput;
-  }
-
-  combineAIResults(faces, objects, style) {
-    console.log('🔄 Combining AI analysis results...');
-    
-    // Build dynamic layer list based on actual detection
-    const layers = ['background'];
-    
-    // Add face parts if face detected
-    if (faces.faces > 0) {
-      layers.push('face');
-      if (faces.eyebrows) layers.push('eyebrows');
+    if (faceOutput && Array.isArray(faceOutput)) {
+      faceCount = faceOutput.length;
+      facePositions = faceOutput.map(face => ({
+        x: face.x || face.left || 0,
+        y: face.y || face.top || 0,
+        width: face.width || 100,
+        height: face.height || 100,
+        confidence: face.confidence || 0.9
+      }));
+      
+      // Extract facial features if available
+      if (faceOutput[0]) {
+        facialFeatures = {
+          eyes: faceOutput[0].landmarks?.eyes || 2,
+          mouth: faceOutput[0].landmarks?.mouth || 1,
+          nose: faceOutput[0].landmarks?.nose || 1,
+          confidence: faceOutput[0].confidence || 0.9
+        };
+      }
     }
-    
-    // Add hair (assume most characters have hair)
-    layers.push('hair');
-    
-    // Add body parts based on style
-    if (style.isFullBody) {
-      layers.push('torso', 'arms', 'legs');
-    } else {
-      layers.push('body');
-    }
-    
-    // Add clothing if detected
-    if (objects.clothing) {
-      layers.push('clothing');
-    }
-    
-    // Add accessories if detected
-    if (objects.accessories) {
-      layers.push('accessories');
-    }
-
-    // Create segments with real confidence scores
-    const segments = layers.map(layer => ({
-      label: layer,
-      confidence: this.getLayerConfidence(layer, faces, objects, style),
-      detected: true
-    }));
 
     return {
-      segments: segments,
-      processingTime: Date.now(),
+      faceCount,
+      facePositions,
+      facialFeatures,
       aiUsed: true,
-      analysisDetails: { faces, objects, style }
+      confidence: faceCount > 0 ? 0.9 : 0.3
     };
   }
 
-  getLayerConfidence(layer, faces, objects, style) {
-    // Return realistic confidence based on detection
-    switch (layer) {
-      case 'face': return faces.confidence || 0.9;
-      case 'clothing': return objects.confidence || 0.8;
-      case 'accessories': return objects.confidence || 0.7;
-      case 'hair': return 0.85; // Usually visible
-      case 'background': return 0.95; // Always present
-      default: return 0.8;
-    }
+  analyzeImageProperties(imageBuffer, imagePath) {
+    console.log('📊 Analyzing image properties...');
+    
+    const stats = fs.statSync(imagePath);
+    const fileSize = stats.size;
+    const fileName = imagePath.toLowerCase();
+    
+    // Basic image analysis
+    const isLargeImage = fileSize > 400000; // Likely full body
+    const isSmallImage = fileSize < 100000; // Likely portrait/icon
+    
+    // File name hints
+    const isAnime = fileName.includes('anime') || fileName.includes('cartoon');
+    const isCharacter = fileName.includes('character') || fileName.includes('avatar');
+    
+    return {
+      fileSize,
+      isLargeImage,
+      isSmallImage,
+      isAnime,
+      isCharacter,
+      aspectRatio: isLargeImage ? 'portrait' : 'square'
+    };
   }
 
-  createSmartFallback(imagePath) {
-    console.log('🔄 Using smart fallback analysis');
+  createDynamicSegmentation(faceResults, imageAnalysis) {
+    console.log('🔄 Creating dynamic segmentation based on face detection...');
+    console.log(`👤 Faces detected: ${faceResults.faceCount}`);
     
-    // Basic file analysis for variation
-    const stats = fs.statSync(imagePath);
-    const isLargeFile = stats.size > 300000;
+    const segments = [];
     
-    const layers = ['background', 'face', 'hair'];
-    
-    if (isLargeFile) {
-      layers.push('body', 'clothing', 'accessories');
+    // Always include background
+    segments.push({
+      label: 'background',
+      confidence: 0.95,
+      detected: true
+    });
+
+    // Dynamic layers based on face detection
+    if (faceResults.faceCount > 0) {
+      // Face detected - human/character
+      segments.push({
+        label: 'face',
+        confidence: faceResults.confidence,
+        detected: true,
+        faceCount: faceResults.faceCount
+      });
+      
+      // Add facial feature layers
+      if (faceResults.facialFeatures.eyes) {
+        segments.push({
+          label: 'eyes',
+          confidence: 0.85,
+          detected: true
+        });
+      }
+      
+      // Assume hair for characters with faces
+      segments.push({
+        label: 'hair',
+        confidence: 0.8,
+        detected: true
+      });
+      
+      // Body based on image size
+      if (imageAnalysis.isLargeImage) {
+        segments.push({
+          label: 'torso',
+          confidence: 0.85,
+          detected: true
+        }, {
+          label: 'arms',
+          confidence: 0.75,
+          detected: true
+        }, {
+          label: 'legs',
+          confidence: 0.70,
+          detected: imageAnalysis.isLargeImage
+        });
+      } else {
+        segments.push({
+          label: 'body',
+          confidence: 0.80,
+          detected: true
+        });
+      }
+      
+      // Clothing for human characters
+      segments.push({
+        label: 'clothing',
+        confidence: 0.75,
+        detected: true
+      });
+      
+      // Multiple faces = group scenario
+      if (faceResults.faceCount > 1) {
+        segments.push({
+          label: 'multiple_characters',
+          confidence: 0.90,
+          detected: true,
+          count: faceResults.faceCount
+        });
+      }
+      
     } else {
-      layers.push('body');
+      // No faces detected - likely object, creature, or abstract
+      console.log('🤖 No faces detected - analyzing as object/creature');
+      
+      segments.push({
+        label: 'main_object',
+        confidence: 0.85,
+        detected: true
+      });
+      
+      if (imageAnalysis.isLargeImage) {
+        segments.push({
+          label: 'body_parts',
+          confidence: 0.70,
+          detected: true
+        }, {
+          label: 'details',
+          confidence: 0.60,
+          detected: true
+        });
+      }
     }
 
     return {
-      segments: layers.map(layer => ({
+      segments,
+      processingTime: Date.now(),
+      aiUsed: true,
+      faceDetection: faceResults,
+      imageAnalysis
+    };
+  }
+
+  createSmartFallback(imagePath) {
+    console.log('🔄 Using smart fallback with image analysis');
+    
+    const stats = fs.statSync(imagePath);
+    const fileSize = stats.size;
+    
+    // Vary results based on file size at least
+    const layers = ['background'];
+    
+    if (fileSize > 300000) {
+      // Large file - assume complex character
+      layers.push('face', 'hair', 'torso', 'arms', 'clothing');
+    } else if (fileSize > 100000) {
+      // Medium file - standard character
+      layers.push('face', 'hair', 'body', 'clothing');
+    } else {
+      // Small file - simple character or icon
+      layers.push('character', 'details');
+    }
+
+    return {
+      segments: layers.map((layer, index) => ({
         label: layer,
-        confidence: 0.7 + Math.random() * 0.2, // Vary confidence
+        confidence: 0.7 + (Math.random() * 0.2), // Vary confidence
         detected: false
       })),
       processingTime: Date.now(),
@@ -250,60 +299,79 @@ class ImageProcessor {
   }
 
   async generateRig(segments) {
-    console.log('🎯 Generating dynamic rig from', segments.length, 'segments');
+    console.log('🎯 Generating dynamic rig from face detection results');
     
-    // Build bones based on detected layers
+    // Extract face detection info
+    const faceSegment = segments.find(s => s.label === 'face');
+    const hasMultipleCharacters = segments.find(s => s.label === 'multiple_characters');
+    const hasFullBody = segments.some(s => ['torso', 'arms', 'legs'].includes(s.label));
+    const isCreature = segments.find(s => s.label === 'main_object');
+    
     const bones = [{ name: 'root', position: [0, 0, 0] }];
+    const animations = ['idle'];
     
-    // Face bones if face detected
-    const hasFace = segments.find(s => s.label === 'face');
-    if (hasFace) {
+    if (faceSegment) {
+      // Human/character rigging
+      console.log(`👤 Creating human rig for ${faceSegment.faceCount} face(s)`);
+      
       bones.push(
-        { name: 'head', position: [0, 1, 0] },
+        { name: 'spine', position: [0, 0.5, 0] },
         { name: 'neck', position: [0, 0.8, 0] },
-        { name: 'jaw', position: [0, 0.9, 0] },
+        { name: 'head', position: [0, 1, 0] },
+        { name: 'jaw', position: [0, 0.9, 0] }
+      );
+      
+      // Eyes based on detection
+      bones.push(
         { name: 'left_eye', position: [-0.1, 0.95, 0] },
         { name: 'right_eye', position: [0.1, 0.95, 0] }
       );
-    }
-    
-    // Body bones if full body detected
-    const hasFullBody = segments.find(s => ['torso', 'arms', 'legs'].includes(s.label));
-    if (hasFullBody) {
+      
+      animations.push('blink', 'head_turn', 'smile');
+      
+      // Full body rigging
+      if (hasFullBody) {
+        bones.push(
+          { name: 'left_shoulder', position: [-0.3, 0.7, 0] },
+          { name: 'right_shoulder', position: [0.3, 0.7, 0] },
+          { name: 'left_arm', position: [-0.4, 0.5, 0] },
+          { name: 'right_arm', position: [0.4, 0.5, 0] },
+          { name: 'left_hip', position: [-0.15, 0.2, 0] },
+          { name: 'right_hip', position: [0.15, 0.2, 0] }
+        );
+        animations.push('wave', 'walk');
+      }
+      
+      // Multiple characters
+      if (hasMultipleCharacters) {
+        bones.push({ name: 'group_controller', position: [0, 0.5, 0] });
+        animations.push('group_interaction');
+      }
+      
+    } else if (isCreature) {
+      // Non-human rigging
+      console.log('🤖 Creating creature/object rig');
+      
       bones.push(
-        { name: 'spine', position: [0, 0.5, 0] },
-        { name: 'left_shoulder', position: [-0.3, 0.7, 0] },
-        { name: 'right_shoulder', position: [0.3, 0.7, 0] },
-        { name: 'left_hip', position: [-0.15, 0.2, 0] },
-        { name: 'right_hip', position: [0.15, 0.2, 0] }
+        { name: 'main_body', position: [0, 0.5, 0] },
+        { name: 'detail_1', position: [0, 0.7, 0] },
+        { name: 'detail_2', position: [0, 0.3, 0] }
       );
+      
+      animations.push('float', 'rotate');
     }
-    
-    // Accessory bones if detected
-    const hasAccessories = segments.find(s => s.label === 'accessories');
-    if (hasAccessories) {
-      bones.push(
-        { name: 'left_ear', position: [-0.15, 1.05, 0] },
-        { name: 'right_ear', position: [0.15, 1.05, 0] }
-      );
-    }
-
-    // Dynamic animations based on detected features
-    const animations = ['idle'];
-    if (hasFace) animations.push('blink', 'smile', 'head_turn');
-    if (hasAccessories) animations.push('ear_twitch');
-    if (hasFullBody) animations.push('wave', 'walk');
 
     return {
-      bones: bones,
+      bones,
       meshes: segments.map(segment => ({
         name: `${segment.label}_mesh`,
         vertices: [],
         indices: [],
         confidence: segment.confidence
       })),
-      animations: animations,
-      quality: segments.length > 4 ? 'high' : 'medium'
+      animations,
+      quality: bones.length > 5 ? 'high' : 'medium',
+      rigType: faceSegment ? 'character' : 'object'
     };
   }
 }
