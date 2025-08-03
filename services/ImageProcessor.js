@@ -325,163 +325,122 @@ createDynamicSegmentation(faceResults, imageAnalysis) {
   };
 }
 
-  createSmartFallback(imagePath) {
-    console.log('🔄 Using smart fallback with image analysis');
-    
-    const stats = fs.statSync(imagePath);
-    const fileSize = stats.size;
-    
-    const layers = ['background'];
-    
-    if (fileSize > 300000) {
-      layers.push('face', 'hair', 'torso', 'arms', 'clothing');
-    } else if (fileSize > 100000) {
-      layers.push('face', 'hair', 'body', 'clothing');
-    } else {
-      layers.push('character', 'details');
-    }
-
-    return {
-      segments: layers.map((layer, index) => ({
-        label: layer,
-        confidence: 0.7 + (Math.random() * 0.2),
-        detected: false
-      })),
-      processingTime: Date.now(),
-      aiUsed: false,
-      fallback: true
-    };
+createSmartFallback(imagePath) {
+  console.log('🔄 Using enhanced smart fallback with detailed analysis');
+  
+  const stats = fs.statSync(imagePath);
+  const fileSize = stats.size;
+  const fileName = imagePath.toLowerCase();
+  
+  console.log(`📊 File size: ${fileSize}, Name: ${fileName}`);
+  
+  const segments = [];
+  
+  // Always include background
+  segments.push({ label: 'background', confidence: 0.95, detected: false });
+  
+  // === FACIAL FEATURES (assume character has face) ===
+  segments.push(
+    { label: 'face_base', confidence: 0.85, detected: false },
+    { label: 'left_eye', confidence: 0.80, detected: false },
+    { label: 'right_eye', confidence: 0.80, detected: false },
+    { label: 'nose', confidence: 0.75, detected: false },
+    { label: 'mouth', confidence: 0.85, detected: false }
+  );
+  
+  // === HAIR LAYERS ===
+  segments.push(
+    { label: 'hair_front', confidence: 0.80, detected: false },
+    { label: 'hair_back', confidence: 0.75, detected: false }
+  );
+  
+  // === DETECT CAT FEATURES from filename ===
+  if (fileName.includes('cat') || fileName.includes('avatar') || fileName.includes('anime')) {
+    console.log('🐱 Cat character detected from filename!');
+    segments.push(
+      { label: 'cat_ears', confidence: 0.90, detected: false },
+      { label: 'whiskers', confidence: 0.85, detected: false },
+      { label: 'cat_tail', confidence: 0.80, detected: false }
+    );
   }
-
-  async generateRig(segments) {
-    console.log('🎯 Generating enhanced rig from face detection results');
+  
+  // === CLOTHING BASED ON FILE SIZE ===
+  if (fileSize > 400000) {
+    // Large detailed image
+    console.log('📏 Large image detected - adding detailed clothing');
+    segments.push(
+      { label: 'shirt', confidence: 0.85, detected: false },
+      { label: 'jacket', confidence: 0.75, detected: false },
+      { label: 'pants', confidence: 0.80, detected: false },
+      { label: 'skirt', confidence: 0.70, detected: false },
+      { label: 'collar', confidence: 0.70, detected: false },
+      { label: 'sleeves', confidence: 0.75, detected: false },
+      { label: 'belt', confidence: 0.65, detected: false },
+      { label: 'shoes', confidence: 0.75, detected: false },
+      { label: 'socks', confidence: 0.60, detected: false }
+    );
     
-    const faceSegment = segments.find(s => s.label === 'face');
-    const hasMultipleCharacters = segments.find(s => s.label === 'multiple_characters');
-    const hasFullBody = segments.some(s => ['torso', 'arms', 'legs'].includes(s.label));
-    const isCreature = segments.find(s => s.label === 'main_object');
+    // Body parts
+    segments.push(
+      { label: 'left_arm', confidence: 0.80, detected: false },
+      { label: 'right_arm', confidence: 0.80, detected: false },
+      { label: 'left_hand', confidence: 0.70, detected: false },
+      { label: 'right_hand', confidence: 0.70, detected: false },
+      { label: 'torso', confidence: 0.85, detected: false },
+      { label: 'left_leg', confidence: 0.75, detected: false },
+      { label: 'right_leg', confidence: 0.75, detected: false }
+    );
     
-    const bones = [{ name: 'root', position: [0, 0, 0] }];
-    const animations = ['idle'];
+    // Accessories for detailed images
+    segments.push(
+      { label: 'earrings', confidence: 0.60, detected: false },
+      { label: 'necklace', confidence: 0.65, detected: false },
+      { label: 'bracelet', confidence: 0.55, detected: false },
+      { label: 'hair_accessory', confidence: 0.70, detected: false }
+    );
     
-    if (faceSegment) {
-      console.log(`👤 Creating detailed facial rig for ${faceSegment.faceCount || 1} face(s)`);
-      
-      bones.push(
-        { name: 'spine', position: [0, 0.5, 0] },
-        { name: 'neck', position: [0, 0.8, 0] },
-        { name: 'head', position: [0, 1, 0] }
-      );
-      
-      // Detailed facial features
-      bones.push(
-        // Eyes and eyelids
-        { name: 'left_eye', position: [-0.1, 0.95, 0] },
-        { name: 'right_eye', position: [0.1, 0.95, 0] },
-        { name: 'left_eyelid', position: [-0.1, 0.96, 0] },
-        { name: 'right_eyelid', position: [0.1, 0.96, 0] },
-        { name: 'left_eyelash', position: [-0.1, 0.97, 0] },
-        { name: 'right_eyelash', position: [0.1, 0.97, 0] },
-        
-        // Eyebrows
-        { name: 'left_eyebrow', position: [-0.12, 0.98, 0] },
-        { name: 'right_eyebrow', position: [0.12, 0.98, 0] },
-        
-        // Nose and mouth
-        { name: 'nose', position: [0, 0.92, 0] },
-        { name: 'upper_lip', position: [0, 0.88, 0] },
-        { name: 'lower_lip', position: [0, 0.86, 0] },
-        { name: 'jaw', position: [0, 0.84, 0] },
-        
-        // Ears
-        { name: 'left_ear', position: [-0.18, 0.95, 0] },
-        { name: 'right_ear', position: [0.18, 0.95, 0] },
-        
-        // Cheeks and face shape
-        { name: 'left_cheek', position: [-0.15, 0.90, 0] },
-        { name: 'right_cheek', position: [0.15, 0.90, 0] },
-        { name: 'forehead', position: [0, 1.02, 0] }
-      );
-      
-      animations.push(
-        'blink', 'wink_left', 'wink_right',
-        'eyebrow_raise', 'eyebrow_furrow',
-        'smile', 'frown', 'pout',
-        'head_turn_left', 'head_turn_right',
-        'head_nod', 'head_shake',
-        'ear_twitch_left', 'ear_twitch_right'
-      );
-      
-      if (hasFullBody) {
-        bones.push(
-          // Arms and shoulders
-          { name: 'left_shoulder', position: [-0.3, 0.7, 0] },
-          { name: 'right_shoulder', position: [0.3, 0.7, 0] },
-          { name: 'left_upper_arm', position: [-0.4, 0.6, 0] },
-          { name: 'right_upper_arm', position: [0.4, 0.6, 0] },
-          { name: 'left_lower_arm', position: [-0.45, 0.4, 0] },
-          { name: 'right_lower_arm', position: [0.45, 0.4, 0] },
-          { name: 'left_hand', position: [-0.5, 0.25, 0] },
-          { name: 'right_hand', position: [0.5, 0.25, 0] },
-          
-          // Torso details
-          { name: 'chest', position: [0, 0.65, 0] },
-          { name: 'waist', position: [0, 0.45, 0] },
-          
-          // Hips and legs
-          { name: 'left_hip', position: [-0.15, 0.25, 0] },
-          { name: 'right_hip', position: [0.15, 0.25, 0] },
-          { name: 'left_upper_leg', position: [-0.15, 0.05, 0] },
-          { name: 'right_upper_leg', position: [0.15, 0.05, 0] },
-          { name: 'left_lower_leg', position: [-0.15, -0.2, 0] },
-          { name: 'right_lower_leg', position: [0.15, -0.2, 0] },
-          { name: 'left_foot', position: [-0.15, -0.4, 0] },
-          { name: 'right_foot', position: [0.15, -0.4, 0] }
-        );
-        
-        animations.push(
-          'wave_left', 'wave_right', 'wave_both',
-          'walk', 'run', 'jump',
-          'lean_left', 'lean_right',
-          'stretch', 'dance'
-        );
-      }
-      
-      if (hasMultipleCharacters) {
-        bones.push({ name: 'group_controller', position: [0, 0.5, 0] });
-        animations.push('group_interaction', 'conversation');
-      }
-      
-    } else if (isCreature) {
-      console.log('🤖 Creating detailed creature/object rig');
-      
-      bones.push(
-        { name: 'main_body', position: [0, 0.5, 0] },
-        { name: 'core', position: [0, 0.6, 0] },
-        { name: 'detail_1', position: [0, 0.8, 0] },
-        { name: 'detail_2', position: [0, 0.4, 0] },
-        { name: 'detail_3', position: [0, 0.2, 0] },
-        { name: 'accent_left', position: [-0.2, 0.6, 0] },
-        { name: 'accent_right', position: [0.2, 0.6, 0] }
-      );
-      
-      animations.push('float', 'rotate', 'pulse', 'shimmer');
-    }
-
-    return {
-      bones,
-      meshes: segments.map(segment => ({
-        name: `${segment.label}_mesh`,
-        vertices: [],
-        indices: [],
-        confidence: segment.confidence
-      })),
-      animations,
-      quality: bones.length > 5 ? 'high' : 'medium',
-      rigType: faceSegment ? 'character' : 'object'
-    };
+  } else if (fileSize > 200000) {
+    // Medium image
+    console.log('📏 Medium image detected - adding standard clothing');
+    segments.push(
+      { label: 'shirt', confidence: 0.80, detected: false },
+      { label: 'pants', confidence: 0.75, detected: false },
+      { label: 'sleeves', confidence: 0.70, detected: false },
+      { label: 'torso', confidence: 0.80, detected: false },
+      { label: 'left_arm', confidence: 0.75, detected: false },
+      { label: 'right_arm', confidence: 0.75, detected: false }
+    );
+    
+  } else {
+    // Small/simple image
+    console.log('📏 Simple image detected - basic layers');
+    segments.push(
+      { label: 'character', confidence: 0.85, detected: false },
+      { label: 'clothing', confidence: 0.75, detected: false },
+      { label: 'details', confidence: 0.65, detected: false }
+    );
   }
+  
+  // === CLOTHING DETAILS for very large files ===
+  if (fileSize > 600000) {
+    console.log('📏 Very detailed image - adding fine details');
+    segments.push(
+      { label: 'buttons', confidence: 0.65, detected: false },
+      { label: 'zipper', confidence: 0.60, detected: false },
+      { label: 'pockets', confidence: 0.70, detected: false },
+      { label: 'strings', confidence: 0.55, detected: false },
+      { label: 'patches', confidence: 0.50, detected: false }
+    );
+  }
+  
+  console.log(`🎯 Generated ${segments.length} layers for fallback`);
+
+  return {
+    segments: segments,
+    processingTime: Date.now(),
+    aiUsed: false,
+    fallback: true,
+    detectionMethod: 'enhanced_fallback'
+  };
 }
-
-module.exports = ImageProcessor;
 
