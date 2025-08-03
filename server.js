@@ -10,10 +10,11 @@ const PORT = process.env.PORT || 3001;
 // Middleware
 app.use(cors({
   origin: [
-    'https://autorig-frontend-xyz.vercel.app', // Your actual Vercel URL
-    'http://localhost:3000',
-    /\.vercel\.app$/
+    'https://autorig-frontend.vercel.app',
+    'http://localhost:3000'
   ],
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type'],
   credentials: true
 }));
 app.use(express.json());
@@ -60,3 +61,4 @@ app.listen(PORT, () => {
   console.log(`AutoRig Backend running on port ${PORT}`);
 
 });
+
