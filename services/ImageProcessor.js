@@ -310,70 +310,112 @@ class ImageProcessor {
     const bones = [{ name: 'root', position: [0, 0, 0] }];
     const animations = ['idle'];
     
-    if (faceSegment) {
-      // Human/character rigging
-      console.log(`👤 Creating human rig for ${faceSegment.faceCount} face(s)`);
+   if (faceSegment) {
+  // Enhanced human/character rigging with detailed facial features
+  console.log(`👤 Creating detailed facial rig for ${faceSegment.faceCount} face(s)`);
+  
+  // Core structure
+  bones.push(
+    { name: 'spine', position: [0, 0.5, 0] },
+    { name: 'neck', position: [0, 0.8, 0] },
+    { name: 'head', position: [0, 1, 0] }
+  );
+  
+  // Detailed facial features
+  bones.push(
+    // Eyes and eyelids
+    { name: 'left_eye', position: [-0.1, 0.95, 0] },
+    { name: 'right_eye', position: [0.1, 0.95, 0] },
+    { name: 'left_eyelid', position: [-0.1, 0.96, 0] },
+    { name: 'right_eyelid', position: [0.1, 0.96, 0] },
+    { name: 'left_eyelash', position: [-0.1, 0.97, 0] },
+    { name: 'right_eyelash', position: [0.1, 0.97, 0] },
+    
+    // Eyebrows
+    { name: 'left_eyebrow', position: [-0.12, 0.98, 0] },
+    { name: 'right_eyebrow', position: [0.12, 0.98, 0] },
+    
+    // Nose and mouth
+    { name: 'nose', position: [0, 0.92, 0] },
+    { name: 'upper_lip', position: [0, 0.88, 0] },
+    { name: 'lower_lip', position: [0, 0.86, 0] },
+    { name: 'jaw', position: [0, 0.84, 0] },
+    
+    // Ears
+    { name: 'left_ear', position: [-0.18, 0.95, 0] },
+    { name: 'right_ear', position: [0.18, 0.95, 0] },
+    
+    // Cheeks and face shape
+    { name: 'left_cheek', position: [-0.15, 0.90, 0] },
+    { name: 'right_cheek', position: [0.15, 0.90, 0] },
+    { name: 'forehead', position: [0, 1.02, 0] }
+  );
+  
+  // Enhanced animations for detailed facial features
+  animations.push(
+    'blink', 'wink_left', 'wink_right',
+    'eyebrow_raise', 'eyebrow_furrow',
+    'smile', 'frown', 'pout',
+    'head_turn_left', 'head_turn_right',
+    'head_nod', 'head_shake',
+    'ear_twitch_left', 'ear_twitch_right'
+  );
+  
+  // Full body rigging
+  if (hasFullBody) {
+    bones.push(
+      // Arms and shoulders
+      { name: 'left_shoulder', position: [-0.3, 0.7, 0] },
+      { name: 'right_shoulder', position: [0.3, 0.7, 0] },
+      { name: 'left_upper_arm', position: [-0.4, 0.6, 0] },
+      { name: 'right_upper_arm', position: [0.4, 0.6, 0] },
+      { name: 'left_lower_arm', position: [-0.45, 0.4, 0] },
+      { name: 'right_lower_arm', position: [0.45, 0.4, 0] },
+      { name: 'left_hand', position: [-0.5, 0.25, 0] },
+      { name: 'right_hand', position: [0.5, 0.25, 0] },
       
-      bones.push(
-        { name: 'spine', position: [0, 0.5, 0] },
-        { name: 'neck', position: [0, 0.8, 0] },
-        { name: 'head', position: [0, 1, 0] },
-        { name: 'jaw', position: [0, 0.9, 0] }
-      );
+      // Torso details
+      { name: 'chest', position: [0, 0.65, 0] },
+      { name: 'waist', position: [0, 0.45, 0] },
       
-      // Eyes based on detection
-      bones.push(
-        { name: 'left_eye', position: [-0.1, 0.95, 0] },
-        { name: 'right_eye', position: [0.1, 0.95, 0] }
-      );
-      
-      animations.push('blink', 'head_turn', 'smile');
-      
-      // Full body rigging
-      if (hasFullBody) {
-        bones.push(
-          { name: 'left_shoulder', position: [-0.3, 0.7, 0] },
-          { name: 'right_shoulder', position: [0.3, 0.7, 0] },
-          { name: 'left_arm', position: [-0.4, 0.5, 0] },
-          { name: 'right_arm', position: [0.4, 0.5, 0] },
-          { name: 'left_hip', position: [-0.15, 0.2, 0] },
-          { name: 'right_hip', position: [0.15, 0.2, 0] }
-        );
-        animations.push('wave', 'walk');
-      }
-      
-      // Multiple characters
-      if (hasMultipleCharacters) {
-        bones.push({ name: 'group_controller', position: [0, 0.5, 0] });
-        animations.push('group_interaction');
-      }
-      
-    } else if (isCreature) {
-      // Non-human rigging
-      console.log('🤖 Creating creature/object rig');
-      
-      bones.push(
-        { name: 'main_body', position: [0, 0.5, 0] },
-        { name: 'detail_1', position: [0, 0.7, 0] },
-        { name: 'detail_2', position: [0, 0.3, 0] }
-      );
-      
-      animations.push('float', 'rotate');
-    }
-
-    return {
-      bones,
-      meshes: segments.map(segment => ({
-        name: `${segment.label}_mesh`,
-        vertices: [],
-        indices: [],
-        confidence: segment.confidence
-      })),
-      animations,
-      quality: bones.length > 5 ? 'high' : 'medium',
-      rigType: faceSegment ? 'character' : 'object'
-    };
+      // Hips and legs
+      { name: 'left_hip', position: [-0.15, 0.25, 0] },
+      { name: 'right_hip', position: [0.15, 0.25, 0] },
+      { name: 'left_upper_leg', position: [-0.15, 0.05, 0] },
+      { name: 'right_upper_leg', position: [0.15, 0.05, 0] },
+      { name: 'left_lower_leg', position: [-0.15, -0.2, 0] },
+      { name: 'right_lower_leg', position: [0.15, -0.2, 0] },
+      { name: 'left_foot', position: [-0.15, -0.4, 0] },
+      { name: 'right_foot', position: [0.15, -0.4, 0] }
+    );
+    
+    animations.push(
+      'wave_left', 'wave_right', 'wave_both',
+      'walk', 'run', 'jump',
+      'lean_left', 'lean_right',
+      'stretch', 'dance'
+    );
   }
+  
+  // Multiple characters
+  if (hasMultipleCharacters) {
+    bones.push({ name: 'group_controller', position: [0, 0.5, 0] });
+    animations.push('group_interaction', 'conversation');
+  }
+  
+} else if (isCreature) {
+  // Enhanced non-human rigging
+  console.log('🤖 Creating detailed creature/object rig');
+  
+  bones.push(
+    { name: 'main_body', position: [0, 0.5, 0] },
+    { name: 'core', position: [0, 0.6, 0] },
+    { name: 'detail_1', position: [0, 0.8, 0] },
+    { name: 'detail_2', position: [0, 0.4, 0] },
+    { name: 'detail_3', position: [0, 0.2, 0] },
+    { name: 'accent_left', position: [-0.2, 0.6, 0] },
+    { name: 'accent_right', position: [0.2, 0.6, 0] }
+  );
+  
+  animations.push('float', 'rotate', 'pulse', 'shimmer');
 }
-
-module.exports = ImageProcessor;
