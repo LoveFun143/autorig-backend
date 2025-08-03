@@ -19,10 +19,51 @@ app.get('/', (req, res) => {
   res.json({ message: 'AutoRig Backend API Running' });
 });
 
-// Simple image processing (working version)
-app.post('/process-image', upload.single('image'), (req, res) => {
-  console.log('=== Simple Processing ===');
-  console.log('Image received:', req.file ? req.file.filename : 'No file');
+// Multi-AI image processing
+app.post('/process-image', upload.single('image'), async (req, res) => {
+  try {
+    console.log('=== Starting Multi-AI Processing ===');
+    console.log('File received:', req.file ? req.file.filename : 'NO FILE');
+    
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    // Use new ImageProcessor
+    const ImageProcessor = require('./services/ImageProcessor');
+    const processor = new ImageProcessor();
+    
+    // Real multi-AI analysis
+    const segmentationResult = await processor.segmentImage(req.file.path);
+    
+    // Generate dynamic rig
+    const riggedModel = await processor.generateRig(segmentationResult.segments);
+    
+    // Return real results
+    const result = {
+      layers: segmentationResult.segments.map(segment => ({
+        name: segment.label,
+        confidence: segment.confidence
+      })),
+      riggedModel: riggedModel,
+      processingInfo: {
+        aiUsed: segmentationResult.aiUsed,
+        fallback: segmentationResult.fallback,
+        detectedFeatures: segmentationResult.analysisDetails
+      }
+    };
+    
+    console.log('✅ Multi-AI processing complete!');
+    console.log('Segments found:', segmentationResult.segments.length);
+    res.json(result);
+    
+  } catch (error) {
+    console.error('❌ Multi-AI Processing Error:', error.message);
+    res.status(500).json({ 
+      error: 'Processing failed: ' + error.message
+    });
+  }
+});
   
   // Enhanced mock results
   res.json({
@@ -57,3 +98,4 @@ app.post('/process-image', upload.single('image'), (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
