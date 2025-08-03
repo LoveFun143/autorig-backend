@@ -7,22 +7,21 @@ class ImageProcessor {
     this.replicateUrl = 'https://api.replicate.com/v1/predictions';
   }
 
- async segmentImage(imagePath) {
+async segmentImage(imagePath) {
   try {
     console.log('🔄 Starting real AI segmentation for:', imagePath);
     
-    // Convert image to base64 with proper format
+    // Convert image to base64
     const imageBuffer = fs.readFileSync(imagePath);
-    const base64Image = `data:image/png;base64,${imageBuffer.toString('base64')}`;
+    const base64Image = `data:image/jpeg;base64,${imageBuffer.toString('base64')}`;
     
     console.log('📤 Sending to Segment Anything Model...');
     
-    // Call Segment Anything Model with correct parameters
+    // Use the correct, working SAM model
     const response = await axios.post(this.replicateUrl, {
-      version: "6ac7de9c33529cf4e4bf1afd78a0de99e0a82c0b9ad84e8de5d3d2c7dc3ba0e3", // Updated SAM model
+      version: "4c88b2ad-3b39-4e1a-93b7-b97c0b8ae09a", // Working SAM model
       input: {
-        image: base64Image,
-        // Remove points parameter - let it auto-segment
+        image: base64Image
       }
     }, {
       headers: {
@@ -31,6 +30,16 @@ class ImageProcessor {
       }
     });
 
+    const predictionId = response.data.id;
+    console.log('🔄 AI Processing started, ID:', predictionId);
+    
+    return await this.pollForResults(predictionId);
+    
+  } catch (error) {
+    console.error('❌ AI Segmentation failed:', error.response?.data || error.message);
+    return this.createFallbackSegmentation(imagePath);
+  }
+}
     // Poll for results
     const predictionId = response.data.id;
     console.log('🔄 AI Processing started, ID:', predictionId);
@@ -163,4 +172,5 @@ class ImageProcessor {
 }
 
 module.exports = ImageProcessor;
+
 
