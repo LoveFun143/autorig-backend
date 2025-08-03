@@ -1,3 +1,4 @@
+console.log('🚀 AutoRig Backend v2.0 - Real AI Processing');
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
@@ -68,4 +69,5 @@ app.post('/process-image', upload.single('image'), async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
 
