@@ -1,63 +1,40 @@
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
-const axios = require('axios');
-require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middleware
-app.use(cors({
-  origin: '*'
-}));
+// Simple CORS - allow all origins
+app.use(cors());
+app.use(express.json());
 
-// File upload configuration
-const upload = multer({
-  dest: 'uploads/',
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
-});
+// Simple file upload
+const upload = multer({ dest: 'uploads/' });
 
-// Health check route
+// Health check
 app.get('/', (req, res) => {
   res.json({ message: 'AutoRig Backend API Running' });
 });
 
-// Image processing route
-app.post('/process-image', upload.single('image'), async (req, res) => {
-  try {
-    console.log('=== Processing Request ===');
-    console.log('File received:', req.file ? req.file.filename : 'NO FILE');
-    console.log('Headers:', req.headers);
-    
-    if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
+// Simple image processing
+app.post('/process-image', upload.single('image'), (req, res) => {
+  console.log('Image received:', req.file ? req.file.filename : 'No file');
+  
+  res.json({
+    layers: [
+      { name: 'background' },
+      { name: 'face' }, 
+      { name: 'hair' },
+      { name: 'body' }
+    ],
+    riggedModel: {
+      bones: [{ name: 'head' }, { name: 'neck' }],
+      animations: ['idle', 'blink', 'head_turn']
     }
-    
-    console.log('Processing image:', req.file.filename);
-    
-    // Mock result for now
-    const mockResult = {
-      layers: [
-        { name: 'background', url: '/mock/background.png' },
-        { name: 'face', url: '/mock/face.png' },
-        { name: 'hair', url: '/mock/hair.png' },
-        { name: 'body', url: '/mock/body.png' }
-      ],
-      riggedModel: {
-        meshes: [],
-        bones: [],
-        animations: ['idle', 'blink', 'head_turn']
-      }
-    };
-    
-    console.log('Sending response:', mockResult);
-    res.json(mockResult);
-  } catch (error) {
-    console.error('=== Processing Error ===');
-    console.error('Error details:', error);
-    res.status(500).json({ error: 'Processing failed: ' + error.message });
-  }
+  });
 });
 
-
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
