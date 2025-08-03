@@ -33,6 +33,14 @@ app.get('/', (req, res) => {
 // Image processing route
 app.post('/process-image', upload.single('image'), async (req, res) => {
   try {
+    console.log('=== Processing Request ===');
+    console.log('File received:', req.file ? req.file.filename : 'NO FILE');
+    console.log('Headers:', req.headers);
+    
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+    
     console.log('Processing image:', req.file.filename);
     
     // Mock result for now
@@ -50,15 +58,11 @@ app.post('/process-image', upload.single('image'), async (req, res) => {
       }
     };
     
+    console.log('Sending response:', mockResult);
     res.json(mockResult);
   } catch (error) {
-    console.error('Processing error:', error);
-    res.status(500).json({ error: 'Processing failed' });
+    console.error('=== Processing Error ===');
+    console.error('Error details:', error);
+    res.status(500).json({ error: 'Processing failed: ' + error.message });
   }
 });
-
-app.listen(PORT, () => {
-  console.log(`AutoRig Backend running on port ${PORT}`);
-
-});
-
